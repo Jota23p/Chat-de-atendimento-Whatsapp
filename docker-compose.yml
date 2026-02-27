@@ -1,0 +1,35 @@
+# docker-compose.yml
+# Sobe o PostgreSQL localmente com Docker
+# Uso: docker-compose up -d
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: salon_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: JOTApedro
+      POSTGRES_DB: salon_bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # (Opcional) Interface visual para o banco
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: salon_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@salon.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

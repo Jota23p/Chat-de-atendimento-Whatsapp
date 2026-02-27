@@ -1,0 +1,197 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  id                String          @id @default(uuid())
+  nome              String          @default("Cliente")
+  telefone          String          @unique
+  email             String?
+  dataNascimento    DateTime?
+  observacoes       String?
+  classificacao     Classificacao   @default(NORMAL)
+  ultimoAtendimento DateTime?
+  totalAtendimentos Int             @default(0)
+  ativo             Boolean         @default(true)
+  criadoEm         DateTime        @default(now())
+  atualizadoEm     DateTime        @updatedAt
+
+  agendamentos      Agendamento[]
+  fidelidade        Fidelidade?
+  interacoes        InteracaoWhatsapp[]
+  estadoConversa    EstadoConversa?
+
+  @@map("clientes")
+}
+
+model Profissional {
+  id               String      @id @default(uuid())
+  nome             String
+  especialidades   String[]
+  horarioInicio    String      @default("09:00")
+  horarioFim       String      @default("18:00")
+  diasTrabalho     Int[]       // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+  intervaloMinutos Int         @default(15)
+  ativo            Boolean     @default(true)
+  criadoEm        DateTime    @default(now())
+
+  agendamentos     Agendamento[]
+
+  @@map("profissionais")
+}
+
+model Servico {
+  id              String        @id @default(uuid())
+  nome            String
+  descricao       String?
+  duracaoMinutos  Int
+  preco           Decimal       @db.Decimal(10, 2)
+  categoria       String        @default("Unhas")
+  ativo           Boolean       @default(true)
+  ordemExibicao   Int           @default(0)
+  criadoEm       DateTime      @default(now())
+
+  agendamentos    Agendamento[]
+
+  @@map("servicos")
+}
+
+model Agendamento {
+  id               String            @id @default(uuid())
+  clienteId        String
+  profissionalId   String
+  servicoId        String
+  dataHoraInicio   DateTime
+  dataHoraFim      DateTime
+  status           StatusAgendamento @default(PENDENTE)
+  confirmadoEm    DateTime?
+  lembreteEnviado  Boolean           @default(false)
+  origem           OrigemAgendamento @default(WHATSAPP)
+  observacoes      String?
+  canceladoMotivo  String?
+  criadoEm        DateTime          @default(now())
+  atualizadoEm    DateTime          @updatedAt
+
+  cliente          Cliente           @relation(fields: [clienteId], references: [id])
+  profissional     Profissional      @relation(fields: [profissionalId], references: [id])
+  servico          Servico           @relation(fields: [servicoId], references: [id])
+  pagamento        Pagamento?
+
+  @@map("agendamentos")
+}
+
+model Pagamento {
+  id             String          @id @default(uuid())
+  agendamentoId  String          @unique
+  valor          Decimal         @db.Decimal(10, 2)
+  formaPagamento FormaPagamento  @default(PIX)
+  status         StatusPagamento @default(PENDENTE)
+  pagoEm        DateTime?
+  criadoEm      DateTime        @default(now())
+
+  agendamento    Agendamento     @relation(fields: [agendamentoId], references: [id])
+
+  @@map("pagamentos")
+}
+
+model Fidelidade {
+  id                String   @id @default(uuid())
+  clienteId         String   @unique
+  pontosAcumulados  Int      @default(0)
+  atendimentosCiclo Int      @default(0)
+  totalResgates     Int      @default(0)
+  atualizadoEm     DateTime @updatedAt
+
+  cliente           Cliente  @relation(fields: [clienteId], references: [id])
+
+  @@map("fidelidade")
+}
+
+model EstadoConversa {
+  id                  String   @id @default(uuid())
+  telefone            String   @unique
+  clienteId           String?  @unique
+  etapa               String   @default("MENU")
+  dadosTemp           Json?    // dados temporários do fluxo (serviço selecionado, data, etc.)
+  tentativasInvalidas Int      @default(0)
+  atualizadoEm       DateTime @updatedAt
+
+  cliente             Cliente? @relation(fields: [clienteId], references: [id])
+
+  @@map("estado_conversas")
+}
+
+model InteracaoWhatsapp {
+  id               String    @id @default(uuid())
+  clienteId        String?
+  telefone         String
+  mensagemRecebida String?
+  mensagemEnviada  String?
+  etapaConversa    String?
+  direcao          String    // INBOUND | OUTBOUND
+  criadoEm        DateTime  @default(now())
+
+  cliente          Cliente?  @relation(fields: [clienteId], references: [id])
+
+  @@map("interacoes_whatsapp")
+}
+
+model ConfigSalao {
+  id              String   @id @default(uuid())
+  chave           String   @unique
+  valor           String
+  atualizadoEm   DateTime @updatedAt
+
+  @@map("config_salao")
+}
+
+model Admin {
+  id         String   @id @default(uuid())
+  nome       String
+  email      String   @unique
+  senhaHash  String
+  criadoEm  DateTime @default(now())
+
+  @@map("admins")
+}
+
+enum Classificacao {
+  VIP
+  FREQUENTE
+  NORMAL
+  INATIVO
+}
+
+enum StatusAgendamento {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
+  CONCLUIDO
+  NAO_CONFIRMADO
+}
+
+enum OrigemAgendamento {
+  WHATSAPP
+  PAINEL_ADMIN
+  MANUAL
+}
+
+enum FormaPagamento {
+  PIX
+  DINHEIRO
+  CARTAO_DEBITO
+  CARTAO_CREDITO
+  GRATUITO
+}
+
+enum StatusPagamento {
+  PENDENTE
+  PAGO
+  CANCELADO
+}
