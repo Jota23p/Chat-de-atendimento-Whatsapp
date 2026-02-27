@@ -1,4 +1,4 @@
-# 💅 Bot WhatsApp — Salão de Manicure
+# Bot WhatsApp — Salão de Manicure
 
 Bot de atendimento automatizado via WhatsApp para salão de manicure com agendamento inteligente, sistema de fidelidade e painel administrativo.
 
